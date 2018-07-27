@@ -44,13 +44,12 @@ def makeTrainTestSets(anwserSavedPath, xmlfilespath, trainval_percent, train_per
     # testlist = [x for x in xmllist if x not in trainvalList]              # test 集合
     testlist = list(set(xmllist) ^ set(trainvalList))
     savefile(anwserSavedPath, 'test.txt', testlist)
-
-
     print trainvalList, testlist
 
     pass
 
 
 if __name__ == '__main__':
-    makeTrainTestSets('.', 'VOC2007xml/JPEGImages', 0.5, 0.5)
+    # makeTrainTestSets('.', 'VOC2007xml/JPEGImages', 0.5, 0.5)
+    makeTrainTestSets('./train_test_set', './captchaXMLs', 0.8, 0.2)
     pass

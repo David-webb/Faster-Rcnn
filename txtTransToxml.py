@@ -5,6 +5,8 @@ import xml.dom.minidom
 import os
 import Image
 import shutil
+import json
+import cv2
 # from PIL import Image
 
 class txtTransToxml():
@@ -135,6 +137,103 @@ class txtTransToxml():
             # print doc.toxml()
         pass
 
+    def tagjson2txt(self, jsonfile, txtfile="captcha_6_tag_15w_noline.txt"):
+        """ 讲保存tag和box信息的json文件转换成txt文件, 每行信息：（图片名, 标记, xmin, ymin, xmax, ymax）,其中不需要逗号隔开,用空格 """
+
+        with open(jsonfile, "r")as rd:
+            tagdic = json.loads(rd.read())
+        fp = open(txtfile, 'a')
+
+        for k, v in tagdic.items():
+            boxlist = v["boxlist"]
+            taglist = list(v["label"])
+            for tag, box in zip(taglist, boxlist):
+                tmp_anstrlist = []
+                tmp_anstrlist.append(("%09d" % int(k)) + '.jpg')
+                tmp_anstrlist.append(tag)
+                tmp_anstrlist.extend([str(b) for b in box])
+                print tmp_anstrlist
+                fp.write(" ".join(tmp_anstrlist).strip() + "\n")
+                pass
+        fp.close()
+
+
+    def checkright(self):
+        """ 检查标记数据中是否有不合格的数据 """
+        def rangeDetec(box):
+            r1 = box[0] < 0 or box[0] > 139 or box[2] < 0 or box[2] > 139
+            r2 = box[1] < 0 or box[1] > 43 or box[3] < 0 or box[3] > 43
+
+            if r1 or r2:
+                return False
+            return True
+
+        countDic = {
+            '0':0,'1':0,'2':0,'3':0,'4':0,'5':0,'6':0,'7':0,'8':0,'9':0,'a':0,'b':0,'c':0,'d':0,
+            'e':0,'f':0,'g':0,'h':0,'i':0,'j':0,'k':0,'l':0,'m':0,'n':0,'o':0,'p':0,'q':0,'r':0,
+            's':0,'t':0,'u':0,'v':0,'w':0,'x':0,'y':0,'z':0,'A':0,'B':0,'C':0,'D':0,'E':0,'F':0,
+            'G':0,'H':0,'I':0,'J':0,'K':0,'L':0,'M':0,'N':0,'O':0,'P':0,'Q':0,'R':0,'S':0,'T':0,
+            'U':0,'V':0,'W':0,'X':0,'Y':0,'Z':0
+        }
+        with open("captcha_1-char_label.json", "r")as rd:
+            labeldic = json.loads(rd.read())
+        for k, v in labeldic.items():
+            boxlist = v["boxlist"]
+            taglist = list(v["label"])
+            for t in taglist:
+                countDic[t] += 1
+            if len(boxlist) != len(taglist):
+                print len(boxlist), len(taglist)
+                print k
+                continue
+            for box in boxlist:
+                if rangeDetec(box):
+                    print k
+                    break
+        for k, v in countDic.items():
+            if v == 0:
+                print k
+        print countDic
+        pass
+
+
+    def checkimgright(self):
+        """ 检测是否验证码图片尺寸有问题：裁剪粘贴导致边缘不整齐 """
+        imagesdirpath = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/captcha_1-char/"
+        imglist = os.listdir(imagesdirpath)
+        for img in imglist:
+            imgobj = cv2.imread(os.path.join(imagesdirpath, img),  0)
+            imshape = imgobj.shape
+            if imshape != (44, 140):
+                print img
+
+        pass
+
+    def freshtagjson(self, jsonfile):
+        """
+            由于box的ymin设置为0 ，而fasterrcnn训练时会将xmin,ymin,xmax,ymax都减1，导致训练报错
+                RuntimeWarning: invalid value encountered in greater_equal
+                keep = np.where((ws >= min_size) & (hs >= min_size))[0]
+            所以需要更新tagjson讲xmin=0, ymin =0 改为 2
+        """
+        with open(jsonfile, "r")as rd:
+            tagdic = json.loads(rd.read())
+        for k, v in tagdic.items():
+            boxlist = v["boxlist"]
+            # taglist = list(v["label"])
+	    v["label"] = v["label"].lower()
+            for box in boxlist:
+                if box[0] == 0:
+                    box[0] = 2
+                if box[1] == 0:
+                    box[1] = 2
+        with open(jsonfile, "w")as wr:
+            wr.write(json.dumps(tagdic))
+        pass
+	
+    def lowerjsonlabel(self):
+	
+	pass
 
     def run(self):
 
@@ -147,7 +246,7 @@ class txtTransToxml():
             datalines = rd.readlines()
 
         # 生成xml文件
-        for line in datalines:
+        for c, line in enumerate(datalines):
             taginfolist = line.split()  # taginfolist = [图片名, 标记, xmin, ymin, xmax, ymax]
             if self.isXmlexisted(taginfolist[0]):   # xml文件已经存在
                 doc = xml.dom.minidom.parse(os.path.join(self.objXFP, taginfolist[0].split('.')[0] + '.xml'))
@@ -159,14 +258,23 @@ class txtTransToxml():
             else:                                   # xml文件不存在,新建xml
                 imSize = self.getImgSize(os.path.join(self.imgfp, taginfolist[0]))
                 self.createNewXml(taginfolist, imSize)
-
+            if c % 1000 ==0 and c:
+                print "解析了%s行信息......" % c
         # 格式化输出
         self.preetyXmls()
         pass
 
 if __name__ == '__main__':
     print "警告：程序'clear_flag'参数可以设置转换前清空xml存放目录下的文件，请注意！"
-    tmpinstance = txtTransToxml('./VOC2007xml/img', './VOC2007xml/img/output.txt', './VOC2007xml/JPEGImages', clear_flag=True)
-    tmpinstance.run()            
-
+    # tmpinstance = txtTransToxml('./VOC2007xml/img', './VOC2007xml/img/output.txt', './VOC2007xml/JPEGImages', clear_flag=True)
+    imagesdirpath = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_15w_withoutline/"
+    tmpinstance = txtTransToxml(imagesdirpath, './captcha_6_tag_15w_noline.txt', './captchaXMLs', clear_flag=True)
+    # tmpinstance.freshtagjson("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_15w_label.json")
+    # tmpinstance.tagjson2txt("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_15w_label.json", txtfile="captcha_6_tag_15w_noline.txt")
+    tmpinstance.run()
+    # tmpinstance.checkright()
+    # tmpinstance.checkimgright()
+    # with open("captcha_1_tag.txt", "r")as rd:
+    #     lines = rd.readlines()
+    # print len(lines)
 
