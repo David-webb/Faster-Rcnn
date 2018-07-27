@@ -1,0 +1,37 @@
+2018年7月20日
+一、验证码数据集更新步骤：
+1. 验证码图片已经生成，box、和标签数据也已经保存在json文件中
+2. 对所有的box坐标，row坐标取0和43的，统统往内缩减两个pixel。因为faster rcnn会对xmin，ymin，xmax，ymax进行减一操作，如果xmin为0，减1后变为65535，会出现如下报错：
+
+	RuntimeWarning: invalid value encountered in greater_equal
+  keep = np.where((ws >= min_size) & (hs >= min_size))[0]
+
+3.重新生成xml文件，替换Annoation。
+
+二、训练改进
+对于英文字母不区分大小写，标签种类减少26，变为36种：（搜狗微信验证码在输入验证的时候不区分大小写）
+1. 修改json文件，对所有的label字段进行lower操作
+2. json2txt：这里记得先将原始的txt文件删除，或者在代码里面判断并操作
+3. 重新生成xml文件
+4. 修改模型代码，主要标签种类总数和具体标签集合
+
+三、模型有很bug,为了测试模型能正常训练保存，修改了迭代次数，从[8w,4w,8w,4w]降到[2w,1w,2w,1w]
+stepsize从3w降到5k
+
+2018年7月23日
+1.现状：模型训练出来后（不区分大小写），AP每个字符的水平在0.65左右，但是由于训练数据只有2w(4w的一半，另一半用来做测试集了)
+2.结果可视化：添加一个caffe下的可视化工具：PR图（分为两个部分：整张验证码的_修改pacal——voc实现， 单个字符的_修改demo实现）
+	将Main下的文件备份，然后按照8:2的比例重新生成训练测试集（2w条测试好久），然后修该pascal_voc文件，画PR图
+	在上述操作的基础上，修改demo：从test.txt中读取文件名（不包含后缀，需要补全），构建路径从JPEGImages里面读取相应的图片，使用模型识别，并且对结果按照bbox框左上角点进行排序，结果join成字符串和json中的label进行比对， 统计结果，并计算精度
+3.添加数据集再训练: 生成新的数据集（重新生成12w数据集，格式是JPG,对生成的代码使用8领域降噪），再次训练模型(远程训练记得先讲pascal_voc文件改回来，思考能否在原模型基础上进行训练)，train:test=8:2
+
+4.数据集制作流程
+（1）生成验证码，将图片文件夹复制到mkdataset目录下,rename 图片文件（imgRename.py脚本）
+（2）将label所在的json文件复制到mkdataset目录下，修改保存bbox和label的json文件：label全部小写（或者在gen——captcha的时候就设置好）、(将坐标值为0的部分设置为2)（txtTrans2xml:freshtagjson）
+（3）将json信息转换成txt文本，文本中每一行记录对应验证码中一个字符的bbox和label。(txtTrans2xml:tagjson2txt方法)。这里要注意，如果第一次转换没有成功，那么修改后再次运行转换的话要先删除原先的txt文件，否则制作xml的时候会连脏数据一起写入xml。
+（4）由（3）中得到的txt文本生成xml文件(txtTrans2xml:run)
+（5）由（4）中得到的xml文件（只用到文件名，其实用防止jpg图片的文件夹也行），设置训练和测试集合,保存到train_test_set/文件夹（train_test_sets.py）
+（6）讲将上述图片文件（或文件夹，但要重命名成JEPGImages）移到VOC2007/目录下对应的JPEGImages/文件夹下，
+     将上述xml文件复制到VOC2007/Annotations/文件夹下（记得先清空原有文件）， 
+     将上述train_test_set/文件夹下的文件（4个）复制到VOC2007/ImageSets/Main文件夹下
+（7）数据集制作完毕！
