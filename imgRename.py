@@ -35,7 +35,7 @@ if __name__ == "__main__":
 #
      #objdir = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_1-char_12w/"
      
-     objdir = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_15w_withoutline"
+     objdir = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline"
      rename(objdir)
 
 #    a = [str(i) for i in range(10)]

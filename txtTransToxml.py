@@ -83,10 +83,11 @@ class txtTransToxml():
         objectnode = self.createObjectnode(doc, taginfolist)
         root.appendChild(objectnode)
 
-        fp = open(os.path.join(self.objXFP, taginfolist[0].split('.')[0] + '.xml'), 'w')
-        # doc.writexml(fp, indent='\t', addindent='\t', newl='\n', encoding="utf-8")
-        doc.writexml(fp)
-        fp.close()
+        #fp = open(os.path.join(self.objXFP, taginfolist[0].split('.')[0] + '.xml'), 'w')
+        ## doc.writexml(fp, indent='\t', addindent='\t', newl='\n', encoding="utf-8")
+        #doc.writexml(fp)
+        #fp.close()
+	return doc
         pass
 
     def isXmlexisted(self, imgname):
@@ -123,8 +124,8 @@ class txtTransToxml():
 
     def preetyXmls(self):
         """ 将xml格式化输出 """
-        for file in os.listdir(self.objXFP):
-            fileName = os.path.join(self.objXFP, file)
+        for f in os.listdir(self.objXFP):
+            fileName = os.path.join(self.objXFP, f)
             with open(fileName, 'r') as rw:
                 # tmptxt = rw.read().replace('\t', '').replace('\n', '')
                 tmptxt = rw.read()
@@ -209,6 +210,20 @@ class txtTransToxml():
 
         pass
 
+    def clearfile(self, del_list):
+	""" 删除有问题的文件 """
+	imgdir = "/home/jingdata/Document/LAB_CODE/py-faster-rcnn/data/VOCdevkit2007/VOC2007/JPEGImages/"
+	xmldir = "/home/jingdata/Document/LAB_CODE/py-faster-rcnn/data/VOCdevkit2007/VOC2007/Annotations/"
+	origin_xmldir = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captchaXMLs/"
+	for d in del_list:
+            imgfile = os.path.join(imgdir, ("%09d" % int(d)) + '.jpg')  #
+	    xmlfile = os.path.join(xmldir, ("%09d" % int(d)) + '.xml')
+	    origin_xmlfile = os.path.join(origin_xmldir, ("%09d" % int(d)) + ".xml")
+	    os.remove(imgfile)
+	    os.remove(xmlfile)
+	    os.remove(origin_xmlfile)
+	pass
+
     def freshtagjson(self, jsonfile):
         """
             由于box的ymin设置为0 ，而fasterrcnn训练时会将xmin,ymin,xmax,ymax都减1，导致训练报错
@@ -216,8 +231,26 @@ class txtTransToxml():
                 keep = np.where((ws >= min_size) & (hs >= min_size))[0]
             所以需要更新tagjson讲xmin=0, ymin =0 改为 2
         """
+	def isinrightrange(bbox):
+	    flag = True
+	    if bbox[0] < 2 or bbox[0] > 140:
+	       print "box[0]:%s" % bbox[0]
+	       flag = False
+	    if bbox[1] < 2 or bbox[1] > 43:
+	       print "box[1]:%s" % bbox[1]
+	       flag = False
+	    if bbox[2] < 2 or bbox[2] > 140:
+	       print "box[2]:%s" % bbox[2]
+	       bbox[2] = 139
+	       flag = False
+	    if bbox[3] < 2 or bbox[3] > 43:
+	       print "box[3]:%s" % bbox[3]
+	       flag = False
+	    return flag
+
         with open(jsonfile, "r")as rd:
             tagdic = json.loads(rd.read())
+	del_list = []
         for k, v in tagdic.items():
             boxlist = v["boxlist"]
             # taglist = list(v["label"])
@@ -227,6 +260,14 @@ class txtTransToxml():
                     box[0] = 2
                 if box[1] == 0:
                     box[1] = 2
+		if not isinrightrange(box):
+		   print "wrong in imgfile:%s" % k		
+		   if k not in del_list:
+		      del_list.append(k)
+	print len(del_list)
+	# self.clearfile(del_list)
+	with open('del_list.txt','w')as wr:
+	     wr.write(json.dumps(del_list))
         with open(jsonfile, "w")as wr:
             wr.write(json.dumps(tagdic))
         pass
@@ -235,6 +276,18 @@ class txtTransToxml():
 	
 	pass
 
+    def writebackxmldoc(self, xmlsdocdict, finished=False):
+	""" 将保存xml的字典写回文件"""
+	for k, v in xmlsdocdict.items():
+	    if not finished and v[1] < 6:
+	       continue
+	    else:
+	       doc = v[0]
+               with open(os.path.join(self.objXFP, k.split('.')[0] + '.xml'), 'wb') as fp:
+                    doc.writexml(fp)
+	       xmlsdocdict.pop(k)			
+	pass
+	
     def run(self):
 
         # 先清空xml文件夹
@@ -245,10 +298,19 @@ class txtTransToxml():
         with open(self.sTP, 'r') as rd:
             datalines = rd.readlines()
 
+	
         # 生成xml文件
+	xmlsdocdict = {}	# k:taginfolist[0], v: (doc_obj, count)
         for c, line in enumerate(datalines):
             taginfolist = line.split()  # taginfolist = [图片名, 标记, xmin, ymin, xmax, ymax]
-            if self.isXmlexisted(taginfolist[0]):   # xml文件已经存在
+	    if taginfolist[0] in xmlsdocdict.keys():
+		doc = xmlsdocdict[taginfolist[0]][0]
+                root = doc.documentElement
+                objectnode = self.createObjectnode(doc, taginfolist)
+                root.appendChild(objectnode)
+		xmlsdocdict[taginfolist[0]][1] += 1
+		
+            elif self.isXmlexisted(taginfolist[0]):   # xml文件已经存在
                 doc = xml.dom.minidom.parse(os.path.join(self.objXFP, taginfolist[0].split('.')[0] + '.xml'))
                 root = doc.documentElement
                 objectnode = self.createObjectnode(doc, taginfolist)
@@ -257,9 +319,13 @@ class txtTransToxml():
                     doc.writexml(fp)
             else:                                   # xml文件不存在,新建xml
                 imSize = self.getImgSize(os.path.join(self.imgfp, taginfolist[0]))
-                self.createNewXml(taginfolist, imSize)
-            if c % 1000 ==0 and c:
+                newdoc = self.createNewXml(taginfolist, imSize)
+		xmlsdocdict[taginfolist[0]] = [newdoc, 1]
+            if c % 120000 ==0 and c:
                 print "解析了%s行信息......" % c
+		self.writebackxmldoc(xmlsdocdict)
+	if len(xmlsdocdict.keys()):
+	   self.writebackxmldoc(xmlsdocdict, finished=True)
         # 格式化输出
         self.preetyXmls()
         pass
@@ -267,10 +333,10 @@ class txtTransToxml():
 if __name__ == '__main__':
     print "警告：程序'clear_flag'参数可以设置转换前清空xml存放目录下的文件，请注意！"
     # tmpinstance = txtTransToxml('./VOC2007xml/img', './VOC2007xml/img/output.txt', './VOC2007xml/JPEGImages', clear_flag=True)
-    imagesdirpath = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_15w_withoutline/"
-    tmpinstance = txtTransToxml(imagesdirpath, './captcha_6_tag_15w_noline.txt', './captchaXMLs', clear_flag=True)
-    # tmpinstance.freshtagjson("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_15w_label.json")
-    # tmpinstance.tagjson2txt("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_15w_label.json", txtfile="captcha_6_tag_15w_noline.txt")
+    imagesdirpath = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline/"
+    tmpinstance = txtTransToxml(imagesdirpath, './captcha_6_tag_30w_noline.txt', './captchaXMLs', clear_flag=True)
+    # tmpinstance.freshtagjson("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline_label.json")
+    # tmpinstance.tagjson2txt("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline_label.json", txtfile="captcha_6_tag_30w_noline.txt")
     tmpinstance.run()
     # tmpinstance.checkright()
     # tmpinstance.checkimgright()

@@ -44,7 +44,7 @@ def makeTrainTestSets(anwserSavedPath, xmlfilespath, trainval_percent, train_per
     # testlist = [x for x in xmllist if x not in trainvalList]              # test 集合
     testlist = list(set(xmllist) ^ set(trainvalList))
     savefile(anwserSavedPath, 'test.txt', testlist)
-    print trainvalList, testlist
+    # print trainvalList, testlist
 
     pass
 
