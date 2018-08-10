@@ -333,10 +333,10 @@ class txtTransToxml():
 if __name__ == '__main__':
     print "警告：程序'clear_flag'参数可以设置转换前清空xml存放目录下的文件，请注意！"
     # tmpinstance = txtTransToxml('./VOC2007xml/img', './VOC2007xml/img/output.txt', './VOC2007xml/JPEGImages', clear_flag=True)
-    imagesdirpath = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline/"
-    tmpinstance = txtTransToxml(imagesdirpath, './captcha_6_tag_30w_noline.txt', './captchaXMLs', clear_flag=True)
-    # tmpinstance.freshtagjson("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline_label.json")
-    # tmpinstance.tagjson2txt("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline_label.json", txtfile="captcha_6_tag_30w_noline.txt")
+    imagesdirpath = "/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline_v2/"
+    tmpinstance = txtTransToxml(imagesdirpath, './captcha_6_tag_30w_noline_v2.txt', './captchaXMLs', clear_flag=True)
+    # tmpinstance.freshtagjson("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline_v2_label.json")
+    # tmpinstance.tagjson2txt("/home/jingdata/Document/LAB_CODE/caffe_fasterrcnn_origindata/mkdataset/Faster-Rcnn/captcha_6-char_test_30w_noline_v2_label.json", txtfile="captcha_6_tag_30w_noline_v2.txt")
     tmpinstance.run()
     # tmpinstance.checkright()
     # tmpinstance.checkimgright()

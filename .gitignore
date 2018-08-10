@@ -2,6 +2,8 @@ captcha_1-char_12w/
 captcha_6-char_test_15w_withoutline/
 captcha_6-char_test_30w_noline/
 captcha_6-char_test_30w_curseline/
+captcha_6-char_test_30w_curseline_v2/
+captcha_6-char_test_30w_noline_v2/
 captchaXMLs/
 train_test_set/
 venv/
