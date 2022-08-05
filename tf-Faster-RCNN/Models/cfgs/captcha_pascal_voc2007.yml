@@ -1,0 +1,30 @@
+DATA_DIRECTORY: '../Data/'
+MODEL_DIRECTORY: 'pascal_voc2007/'
+RESTORE_SLIM_FILE: '../Data/ResNet50/resnet_v1_50.ckpt'
+
+IMAGE_FORMAT: '.jpg'
+
+# 这里的label顺序不正确, 要和制作的数据集一样！！！！！！
+CLASSES: ['__background__', 
+          '1', '2', '3', '4', '5',
+          '6', '7', '8', 'A', 'B',
+          'C', 'D', 'E', 'F', 'H',
+          'J', 'K', 'M', 'N', 'P', 
+          'R', 'S', 'T', 'V', 'X', 
+          'Y', 'c', 'k', 'p', 's',
+          'v', 'x']
+
+
+NUM_CLASSES: 33
+
+FRCNN_FC_HIDDEN: [4096,4096]
+
+DISPLAY_RATE: 1000
+
+RPN_ANCHOR_SCALES: [1,2,3]
+
+TRAIN:
+  LEARNING_RATE: 0.003
+  LEARNING_RATE_DECAY: 0.1
+  LEARNING_RATE_DECAY_RATE: 20
+  RPN_BBOX_LAMBDA: 1.0
